@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>JEE Main Analysis Dashboard</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+</script>
+
+<style>
+body { font-family: system-ui; background:#f4f6fb; padding:20px; }
+.container {
+  max-width:1000px; margin:auto; background:#fff;
+  padding:25px; border-radius:12px;
+}
+h2 { text-align:center; color:#2563eb; }
+select, input, button {
+  width:100%; padding:14px; margin-top:12px;
+}
+button {
+  background:#2563eb; color:white;
+  border:none; border-radius:8px; font-weight:600;
+  cursor:pointer;
+}
+table {
+  width:100%; border-collapse:collapse; margin-top:20px;
+}
+th, td {
+  border:1px solid #ddd; padding:10px; text-align:center;
+}
+th { background:#f1f5f9; }
+#total { text-align:center; font-size:1.4em; margin-top:20px; }
+</style>
+</head>
+
+<body>
+<div class="container">
+<h2>JEE Main Analysis Dashboard</h2>
+
+<select id="shift">
+  <option value="">Select Exam Shift</option>
+  <option value="2026-01-24-S1">24 Jan 2026 – Shift 1</option>
+  <option value="2026-01-21-S1">21 Jan 2026 – Shift 1</option>
+</select>
+
+<input type="file" id="pdfFile" accept=".pdf">
+<button id="analyzeBtn">Analyze</button>
+
+<div id="total"></div>
+
+<table>
+<thead>
+<tr>
+  <th>Subject</th>
+  <th>Score</th>
+  <th>Correct</th>
+  <th>Wrong</th>
+  <th>Unattempted</th>
+</tr>
+</thead>
+<tbody id="tbody"></tbody>
+</table>
+</div>
+
+<script>
+document.getElementById("analyzeBtn").addEventListener("click", process);
+
+/* ================= ANSWER KEYS ================= */
+
+const ANSWER_KEYS = {
+  "2026-01-24-S1": {
+    "444792526":{"correctAnswerId":"4447921789","subject":"Mathematics"},
+    "444792527":{"correctAnswerId":"4447921793","subject":"Mathematics"},
+    "444792528":{"correctAnswerId":"4447921795","subject":"Mathematics"},
+    "444792529":{"correctAnswerId":"4447921800","subject":"Mathematics"},
+    "444792530":{"correctAnswerId":"4447921802","subject":"Mathematics"},
+    "444792531":{"correctAnswerId":"4447921806","subject":"Mathematics"},
+    "444792532":{"correctAnswerId":"4447921811","subject":"Mathematics"},
+    "444792533":{"correctAnswerId":"4447921815","subject":"Mathematics"},
+    "444792534":{"correctAnswerId":"4447921818","subject":"Mathematics"},
+    "444792535":{"correctAnswerId":"4447921824","subject":"Mathematics"},
+    "444792536":{"correctAnswerId":"4447921828","subject":"Mathematics"},
+    "444792537":{"correctAnswerId":"4447921832","subject":"Mathematics"},
+    "444792538":{"correctAnswerId":"4447921835","subject":"Mathematics"},
+    "444792539":{"correctAnswerId":"4447921841","subject":"Mathematics"},
+    "444792540":{"correctAnswerId":"4447921842","subject":"Mathematics"},
+    "444792541":{"correctAnswerId":"4447921848","subject":"Mathematics"},
+    "444792542":{"correctAnswerId":"4447921850","subject":"Mathematics"},
+    "444792543":{"correctAnswerId":"4447921856","subject":"Mathematics"},
+    "444792544":{"correctAnswerId":"4447921860","subject":"Mathematics"},
+    "444792545":{"correctAnswerId":"4447921862","subject":"Mathematics"},
+    "444792546":{"correctAnswerId":"36","subject":"Mathematics"},
+    "444792547":{"correctAnswerId":"78","subject":"Mathematics"},
+    "444792548":{"correctAnswerId":"72","subject":"Mathematics"},
+    "444792549":{"correctAnswerId":"2","subject":"Mathematics"},
+    "444792550":{"correctAnswerId":"4","subject":"Mathematics"},
+
+    "444792551":{"correctAnswerId":"4447921874","subject":"Physics"},
+    "444792552":{"correctAnswerId":"4447921878","subject":"Physics"},
+    "444792553":{"correctAnswerId":"4447921880","subject":"Physics"},
+    "444792554":{"correctAnswerId":"4447921886","subject":"Physics"},
+    "444792555":{"correctAnswerId":"4447921887","subject":"Physics"},
+    "444792556":{"correctAnswerId":"4447921893","subject":"Physics"},
+    "444792557":{"correctAnswerId":"4447921897","subject":"Physics"},
+    "444792558":{"correctAnswerId":"4447921900","subject":"Physics"},
+    "444792559":{"correctAnswerId":"4447921903","subject":"Physics"},
+    "444792560":{"correctAnswerId":"4447921907","subject":"Physics"},
+    "444792561":{"correctAnswerId":"4447921913","subject":"Physics"},
+    "444792562":{"correctAnswerId":"4447921916","subject":"Physics"},
+    "444792563":{"correctAnswerId":"4447921920","subject":"Physics"},
+    "444792564":{"correctAnswerId":"4447921926","subject":"Physics"},
+    "444792565":{"correctAnswerId":"4447921930","subject":"Physics"},
+    "444792566":{"correctAnswerId":"4447921931","subject":"Physics"},
+    "444792567":{"correctAnswerId":"4447921938","subject":"Physics"},
+    "444792568":{"correctAnswerId":"4447921941","subject":"Physics"},
+    "444792569":{"correctAnswerId":"4447921945","subject":"Physics"},
+    "444792570":{"correctAnswerId":"4447921949","subject":"Physics"},
+    "444792571":{"correctAnswerId":"125","subject":"Physics"},
+    "444792572":{"correctAnswerId":"210","subject":"Physics"},
+    "444792573":{"correctAnswerId":"160","subject":"Physics"},
+    "444792574":{"correctAnswerId":"3730","subject":"Physics"},
+    "444792575":{"correctAnswerId":"64","subject":"Physics"},
+
+    "444792576":{"correctAnswerId":"4447921958","subject":"Chemistry"},
+    "444792577":{"correctAnswerId":"4447921961","subject":"Chemistry"},
+    "444792578":{"correctAnswerId":"4447921966","subject":"Chemistry"},
+    "444792579":{"correctAnswerId":"4447921971","subject":"Chemistry"},
+    "444792580":{"correctAnswerId":"4447921975","subject":"Chemistry"},
+    "444792581":{"correctAnswerId":"4447921978","subject":"Chemistry"},
+    "444792582":{"correctAnswerId":"4447921981","subject":"Chemistry"},
+    "444792583":{"correctAnswerId":"4447921986","subject":"Chemistry"},
+    "444792584":{"correctAnswerId":"4447921988","subject":"Chemistry"},
+    "444792585":{"correctAnswerId":"4447921995","subject":"Chemistry"},
+    "444792586":{"correctAnswerId":"4447921996","subject":"Chemistry"},
+    "444792587":{"correctAnswerId":"4447922002","subject":"Chemistry"},
+    "444792588":{"correctAnswerId":"4447922004","subject":"Chemistry"},
+    "444792589":{"correctAnswerId":"4447922010","subject":"Chemistry"},
+    "444792590":{"correctAnswerId":"4447922012","subject":"Chemistry"},
+    "444792591":{"correctAnswerId":"4447922017","subject":"Chemistry"},
+    "444792592":{"correctAnswerId":"4447922020","subject":"Chemistry"},
+    "444792593":{"correctAnswerId":"4447922025","subject":"Chemistry"},
+    "444792594":{"correctAnswerId":"4447922031","subject":"Chemistry"},
+    "444792595":{"correctAnswerId":"4447922033","subject":"Chemistry"},
+    "444792596":{"correctAnswerId":"12","subject":"Chemistry"},
+    "444792597":{"correctAnswerId":"15","subject":"Chemistry"},
+    "444792598":{"correctAnswerId":"54","subject":"Chemistry"},
+    "444792599":{"correctAnswerId":"4","subject":"Chemistry"},
+    "444792600":{"correctAnswerId":"111","subject":"Chemistry"}
+  },
+
+  "2026-01-21-S1": {} /* already validated earlier */
+};
+
+/* ================= CORE LOGIC ================= */
+
+async function process() {
+  const shift = document.getElementById("shift").value;
+  const file = document.getElementById("pdfFile").files[0];
+  if (!shift || !file) return alert("Select shift and upload PDF");
+
+  const key = ANSWER_KEYS[shift];
+  if (!key || Object.keys(key).length === 0)
+    return alert("Answer key missing for this shift");
+
+  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+
+  let text = "";
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it => it.str).join(" ") + " ";
+  }
+
+  render(calculate(text, key));
+}
+
+function calculate(text, key) {
+  const res = {
+    Physics:{c:0,w:0,u:0,s:0},
+    Chemistry:{c:0,w:0,u:0,s:0},
+    Mathematics:{c:0,w:0,u:0,s:0}
+  };
+
+  const blocks = text.replace(/\s+/g," ")
+    .split(/(?=Question\s*ID\s*[: ]\s*\d+)/i);
+
+  for (const block of blocks) {
+    const qid = (block.match(/Question\s*ID\s*[: ]\s*(\d+)/i)||[])[1];
+    if (!qid || !key[qid]) continue;
+
+    const { correctAnswerId, subject } = key[qid];
+    if (!res[subject]) continue;
+
+    const type = (block.match(/Question\s*Type\s*[: ]\s*(MCQ|SA)/i)||[])[1];
+
+    let attempted=false, correct=false;
+
+    if (type==="MCQ") {
+      const optMap={};
+      block.replace(/Option\s*(\d)\s*ID\s*[: ]\s*(\d+)/gi,(_,i,id)=>optMap[i]=id);
+      const chosen=(block.match(/Chosen\s*Option\s*[: ]\s*(\d+|--|-)/i)||[])[1];
+      if (optMap[chosen]) {
+        attempted=true;
+        if (optMap[chosen]===correctAnswerId) correct=true;
+      }
+    } else if (type==="SA") {
+      const num=(block.match(/(?:Given|Answer)\s*[: ]\s*([0-9.\-]+)/i)||[])[1];
+      if (num && num!=="--" && num!=="-") {
+        attempted=true;
+        if (Math.abs(+num-+correctAnswerId)<0.01) correct=true;
+      }
+    }
+
+    if (!attempted) res[subject].u++;
+    else if (correct){res[subject].c++;res[subject].s+=4;}
+    else{res[subject].w++;res[subject].s-=1;}
+  }
+  return res;
+}
+
+function render(res){
+  let total=0;
+  const tbody=document.getElementById("tbody");
+  tbody.innerHTML="";
+  ["Physics","Chemistry","Mathematics"].forEach(s=>{
+    total+=res[s].s;
+    tbody.innerHTML+=
+      `<tr><td>${s}</td><td>${res[s].s}</td><td>${res[s].c}</td><td>${res[s].w}</td><td>${res[s].u}</td></tr>`;
+  });
+  document.getElementById("total").innerText="Total Score: "+total;
+}
+</script>
+</body>
+</html>
+
+
+
