@@ -10,6 +10,7 @@
 <title>KEAM Score Calculator</title>
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
 
@@ -56,7 +57,7 @@
     </div>
   </section>
 
-  <button id="analyzeBtn" class="btn-primary">
+  <button id="analyzeBtn" class="btn-primary" type="button">
     <span id="analyzeBtnText">Analyze</span>
     <span id="analyzeBtnSpinner" class="spinner" aria-hidden="true" hidden></span>
   </button>
@@ -89,8 +90,9 @@
       </table>
     </div>
 
-    <div class="center-row">
-      <button id="clearDataBtn" class="btn-danger">Clear data</button>
+    <div class="center-row action-row">
+      <button id="exportPdfBtn" class="btn-secondary" type="button">Export PDF</button>
+      <button id="clearDataBtn" class="btn-danger" type="button">Clear data</button>
     </div>
   </div>
 
@@ -121,6 +123,7 @@
 
 </div>
 
+<script src="pdf-export.js"></script>
 <script src="keam-script.js"></script>
 </body>
 </html>

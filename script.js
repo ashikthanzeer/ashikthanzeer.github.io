@@ -166,6 +166,7 @@ window.addEventListener('DOMContentLoaded', () => {
     try { process(); } catch(e) { console.error('process error', e); }
   });
   document.getElementById("themeToggle")?.addEventListener("click", toggleTheme);
+  document.getElementById("exportPdfBtn")?.addEventListener("click", exportJeePdf);
 
   document.getElementById('dropZone')?.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('pdfFile')?.click(); }
@@ -208,6 +209,7 @@ dropZone.addEventListener('drop', e => {
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
 let _lastResult = null;
+const JEE_SUBJECT_ORDER = ["Physics", "Chemistry", "Mathematics"];
 
 function applyTheme(theme) {
   document.body.classList.toggle('dark', theme === 'dark');
@@ -262,7 +264,13 @@ async function process() {
     // Strip ALL whitespace — makes parsing whitespace-independent
     const text = rawText.replace(/\s+/g, "");
 
-    render(calculate(text, key));
+    const result = calculate(text, key);
+    result.shiftId = shift;
+    result.shiftLabel = getShiftLabel(shift);
+    result.sourceFileName = file.name;
+    result.generatedAt = new Date().toISOString();
+
+    render(result);
   } catch (err) {
     console.error('Analysis error:', err);
     alert('Failed to analyze PDF. Please check the file and try again.\n\n' + err.message);
@@ -369,7 +377,100 @@ function normalizeResult(result) {
   const scores = result?.scores || result;
   const details = Array.isArray(result?.details) ? result.details : [];
   const totalQuestions = result?.totalQuestions || details.length || 75;
-  return { scores, details, totalQuestions };
+  const shiftId = result?.shiftId || '';
+  const shiftLabel = result?.shiftLabel || getShiftLabel(shiftId) || getShiftLabel(document.getElementById('shift')?.value || '');
+  const sourceFileName = result?.sourceFileName || '';
+  const generatedAt = result?.generatedAt || null;
+  return { scores, details, totalQuestions, shiftId, shiftLabel, sourceFileName, generatedAt };
+}
+
+function getShiftLabel(shiftId) {
+  if (!shiftId) return '';
+
+  const option = document.querySelector(`#shift option[value="${shiftId}"]`);
+  return option?.textContent?.trim() || shiftId;
+}
+
+function getJeeSubjectAnalytics(normalized) {
+  return JEE_SUBJECT_ORDER.map((subject) => {
+    const entry = normalized.scores?.[subject] || { c: 0, w: 0, u: 0, s: 0 };
+    const subjectQuestionCount = normalized.details.filter((detail) => detail.subject === subject).length
+      || (entry.c + entry.w + entry.u);
+    const attempted = entry.c + entry.w;
+    const accuracy = attempted ? Math.round((entry.c / attempted) * 100) : 0;
+    const attemptRate = subjectQuestionCount ? Math.round((attempted / subjectQuestionCount) * 100) : 0;
+    const maxScore = subjectQuestionCount * 4;
+
+    return {
+      subject,
+      score: entry.s,
+      correct: entry.c,
+      wrong: entry.w,
+      skipped: entry.u,
+      attempted,
+      accuracy,
+      attemptRate,
+      questionCount: subjectQuestionCount,
+      maxScore
+    };
+  });
+}
+
+function exportJeePdf() {
+  if (!_lastResult) {
+    alert('Analyze a response sheet first.');
+    return;
+  }
+
+  if (!window.PdfExportUtils) {
+    alert('PDF export is unavailable right now. Please refresh and try again.');
+    return;
+  }
+
+  const normalized = normalizeResult(_lastResult);
+  const subjectAnalytics = getJeeSubjectAnalytics(normalized);
+  const totalScore = subjectAnalytics.reduce((sum, item) => sum + item.score, 0);
+  const totalCorrect = subjectAnalytics.reduce((sum, item) => sum + item.correct, 0);
+  const totalWrong = subjectAnalytics.reduce((sum, item) => sum + item.wrong, 0);
+  const totalAttempted = totalCorrect + totalWrong;
+  const maxScore = normalized.totalQuestions * 4;
+  const accuracy = totalAttempted ? Math.round((totalCorrect / totalAttempted) * 100) : 0;
+
+  try {
+    const pdf = window.PdfExportUtils.createDoc();
+    const subtitleLines = [
+      normalized.shiftLabel || 'JEE Main'
+    ];
+
+    window.PdfExportUtils.addTitle(pdf, 'JEE Main Score Analysis', subtitleLines);
+
+    window.PdfExportUtils.addSection(pdf, 'Summary');
+    window.PdfExportUtils.addKeyValueLines(pdf, [
+      { label: 'Total Score', value: `${totalScore} / ${maxScore}` },
+      { label: 'Total Accuracy', value: `${accuracy}%` }
+    ]);
+
+    window.PdfExportUtils.addSection(pdf, 'Subject-wise Score Analysis');
+    window.PdfExportUtils.addTable(
+      pdf,
+      [
+        { label: 'Subject', width: 0.4 },
+        { label: 'Score', width: 0.3 },
+        { label: 'Accuracy', width: 0.3 }
+      ],
+      subjectAnalytics.map((item) => ([
+        item.subject,
+        `${item.score}/${item.maxScore}`,
+        `${item.accuracy}%`
+      ]))
+    );
+
+    const shiftToken = (normalized.shiftId || 'jee-main').replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase();
+    window.PdfExportUtils.save(pdf, `jee-score-analysis-${shiftToken || 'report'}.pdf`);
+  } catch (error) {
+    console.error('Failed to export JEE PDF:', error);
+    alert(`Unable to export PDF right now.\n\n${error.message}`);
+  }
 }
 
 function render(result) {
@@ -597,9 +698,14 @@ window.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('clearDataBtn')?.addEventListener('click', () => {
     localStorage.removeItem('lastResult');
+    _lastResult = null;
     document.getElementById('resultsSection').style.display   = 'none';
     document.getElementById('charts').style.display           = 'none';
     document.getElementById('questionAnalysis').style.display = 'none';
+    if (window.scoreChartInstance) {
+      window.scoreChartInstance.destroy();
+      window.scoreChartInstance = null;
+    }
   });
 });
 

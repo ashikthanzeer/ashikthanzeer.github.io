@@ -293,6 +293,23 @@ body {
 }
 .btn-danger:hover { background: rgba(239,68,68,.08); }
 
+.btn-secondary {
+  padding: 9px 20px;
+  min-height: 40px;
+  font-family: inherit;
+  font-size: .9rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.btn-secondary:hover { background: var(--accent-soft); }
+
 .btn { padding: 9px 20px; min-height: 40px; font-family: inherit;
        font-size: .9rem; font-weight: 600; cursor: pointer;
        border-radius: var(--radius-sm); border: 1px solid var(--danger);
@@ -477,6 +494,14 @@ td.result-cancelled { color: var(--warn); font-weight: 600; }
 .center-row {
   text-align: center;
   margin-top: 12px;
+}
+
+.action-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 /* ── Utility classes ── */
