@@ -59,6 +59,7 @@ function bindEvents() {
   document.getElementById("analyzeBtn")?.addEventListener("click", handleAnalyze);
   document.getElementById("themeToggle")?.addEventListener("click", toggleTheme);
   document.getElementById("clearDataBtn")?.addEventListener("click", clearStoredData);
+  document.getElementById("exportPdfBtn")?.addEventListener("click", exportKeamPdf);
   document.getElementById("shift")?.addEventListener("change", persistFormState);
   document.getElementById("responseInput")?.addEventListener("input", persistFormState);
 }
@@ -126,6 +127,14 @@ function handleAnalyze() {
   try {
     const parsedResponses = parseResponses(responseText);
     const result = calculateResult(parsedResponses.answers, shiftConfig);
+    result.sourceNote = shiftConfig.note || "";
+    result.sourceUrl = shiftConfig.sourceUrl || "";
+    result.parseSummary = {
+      validCount: parsedResponses.validCount,
+      invalidCount: parsedResponses.invalidLines.length,
+      duplicateCount: parsedResponses.duplicateQuestions.length,
+      cancelledCount: (shiftConfig.cancelledQuestions || []).length
+    };
     renderResult(result, parsedResponses, shiftConfig);
     persistFormState();
     localStorage.setItem(RESULT_STORAGE_KEY, JSON.stringify(result));
@@ -368,6 +377,88 @@ function renderQuestionTable(details) {
 
     tbody.appendChild(row);
   });
+}
+
+function getKeamSubjectAnalytics(result) {
+  return SUBJECT_ORDER.map((subject) => {
+    const entry = result.scores?.[subject] || { c: 0, w: 0, u: 0, s: 0 };
+    const questionCount = result.details?.filter((detail) => detail.subject === subject && !detail.cancelled).length
+      || (entry.c + entry.w + entry.u);
+    const attempted = entry.c + entry.w;
+    const accuracy = attempted ? Math.round((entry.c / attempted) * 100) : 0;
+    const attemptRate = questionCount ? Math.round((attempted / questionCount) * 100) : 0;
+    const maxScore = questionCount * MARKS_CORRECT;
+
+    return {
+      subject,
+      score: entry.s,
+      correct: entry.c,
+      wrong: entry.w,
+      skipped: entry.u,
+      attempted,
+      accuracy,
+      attemptRate,
+      questionCount,
+      maxScore
+    };
+  });
+}
+
+function exportKeamPdf() {
+  if (!lastResult) {
+    alert("Analyze the KEAM responses first.");
+    return;
+  }
+
+  if (!window.PdfExportUtils) {
+    alert("PDF export is unavailable right now. Please refresh and try again.");
+    return;
+  }
+
+  const subjectAnalytics = getKeamSubjectAnalytics(lastResult);
+  const totalScore = subjectAnalytics.reduce((sum, item) => sum + item.score, 0);
+  const totalCorrect = subjectAnalytics.reduce((sum, item) => sum + item.correct, 0);
+  const totalWrong = subjectAnalytics.reduce((sum, item) => sum + item.wrong, 0);
+  const totalAttempted = totalCorrect + totalWrong;
+  const scoredQuestionCount = subjectAnalytics.reduce((sum, item) => sum + item.questionCount, 0);
+  const maxScore = scoredQuestionCount * MARKS_CORRECT;
+  const accuracy = totalAttempted ? Math.round((totalCorrect / totalAttempted) * 100) : 0;
+
+  try {
+    const pdf = window.PdfExportUtils.createDoc();
+    const subtitleLines = [
+      lastResult.shiftLabel || "KEAM"
+    ];
+
+    window.PdfExportUtils.addTitle(pdf, "KEAM Score Analysis", subtitleLines);
+
+    window.PdfExportUtils.addSection(pdf, "Summary");
+    window.PdfExportUtils.addKeyValueLines(pdf, [
+      { label: "Total Score", value: `${totalScore} / ${maxScore}` },
+      { label: "Total Accuracy", value: `${accuracy}%` }
+    ]);
+
+    window.PdfExportUtils.addSection(pdf, "Subject-wise Score Analysis");
+    window.PdfExportUtils.addTable(
+      pdf,
+      [
+        { label: "Subject", width: 0.4 },
+        { label: "Score", width: 0.3 },
+        { label: "Accuracy", width: 0.3 }
+      ],
+      subjectAnalytics.map((item) => ([
+        item.subject,
+        `${item.score}/${item.maxScore}`,
+        `${item.accuracy}%`
+      ]))
+    );
+
+    const shiftToken = (lastResult.shiftId || "keam").replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "").toLowerCase();
+    window.PdfExportUtils.save(pdf, `keam-score-analysis-${shiftToken || "report"}.pdf`);
+  } catch (error) {
+    console.error("Failed to export KEAM PDF:", error);
+    alert(`Unable to export PDF right now.\n\n${error.message}`);
+  }
 }
 
 function drawRing(scores) {
