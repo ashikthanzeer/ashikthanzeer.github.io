@@ -8,6 +8,12 @@ window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("themeToggle")?.addEventListener("click", toggleHomeTheme);
 });
 
+window.addEventListener("pageshow", () => {
+  const savedTheme = localStorage.getItem(HOME_THEME_KEY) ||
+    (window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  applyHomeTheme(savedTheme);
+});
+
 function applyHomeTheme(theme) {
   document.body.classList.toggle("dark", theme === "dark");
   localStorage.setItem(HOME_THEME_KEY, theme);
