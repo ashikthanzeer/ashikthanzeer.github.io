@@ -277,7 +277,7 @@ const ANSWER_KEYS = {
     "69112134": {"correctAnswerId": "691121121", "subject": "Physics"},
     "69112135": {"correctAnswerId": "691121125", "subject": "Physics"},
     "69112136": {"correctAnswerId": "691121127", "subject": "Physics"},
-    "69112137": {"correctAnswerId": "691121133", "subject": "Physics"},
+    "69112137": {"correctAnswerId": "691121131", "subject": "Physics"},
     "69112138": {"correctAnswerId": "691121134", "subject": "Physics"},
     "69112139": {"correctAnswerId": "691121138", "subject": "Physics"},
     "69112140": {"correctAnswerId": "691121143", "subject": "Physics"},
@@ -313,7 +313,7 @@ const ANSWER_KEYS = {
     "69112169": {"correctAnswerId": "691121245", "subject": "Chemistry"},
     "69112170": {"correctAnswerId": "691121248", "subject": "Chemistry"},
     "69112171": {"correctAnswerId": "33", "subject": "Chemistry"},
-    "69112172": {"correctAnswerId": "14", "subject": "Chemistry"},
+    "69112172": {"correctAnswerId": "8", "subject": "Chemistry"},
     "69112173": {"correctAnswerId": "17", "subject": "Chemistry"},
     "69112174": {"correctAnswerId": "41", "subject": "Chemistry"},
     "69112175": {"correctAnswerId": "727", "subject": "Chemistry"}
